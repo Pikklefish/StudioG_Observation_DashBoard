@@ -2,7 +2,8 @@
 For original source code visit [SaiUpadhyayula's GitHub Repository](https://github.com/SaiUpadhyayula/springboot3-observablity) 
 
 > [!NOTE]
-> This project was repurposed for the use of **Studio Galilei**'s Research and Development Division (Create G).
+> This project was repurposed for the use of [**Studio Galilei**'s](https://www.studiog.kr/) 
+> research and development division (Create G).
  
 Last Modified (2024-08-07)
 
@@ -30,7 +31,7 @@ for production level Kubernetes is preferred.
     <version>1.5.2</version>
 </dependency>
 ```
-check this library for the most recent version: [Maven Repository](https://mvnrepository.com/artifact/com.github.loki4j/loki-logback-appender)
+check this library for the latest version: [Maven Repository](https://mvnrepository.com/artifact/com.github.loki4j/loki-logback-appender)
 
 **Prometheus dependency**
 
@@ -41,7 +42,6 @@ check this library for the most recent version: [Maven Repository](https://mvnre
  <artifactId>micrometer-registry-prometheus</artifactId>
  <scope>runtime</scope>
 </dependency>
-
 ```
 
 *Spring Actuator: SpringBoot Actuator exposes operational information about the running application.*
@@ -79,7 +79,7 @@ To trace calls to the database, add the following dependency
     <version>1.0.5</version>
 </dependency>
 ```
-check this library for the most recent version: [Maven Repository](https://mvnrepository.com/artifact/net.ttddyy.observation/datasource-micrometer-spring-boot)
+check this library for the latest version: [Maven Repository](https://mvnrepository.com/artifact/net.ttddyy.observation/datasource-micrometer-spring-boot)
 
 Download the AOP dependency for ease of integration
 ```
@@ -178,10 +178,208 @@ ruler:
 #  reporting_enabled: false
 ```
 
-## Running the project
-To run the project, you need to have Docker and Docker Compose installed. Then, run the following command:
+### PROMETHEUS set up
 
-```docker compose up -d```
+> [!IMPORTANT]
+>  add the following properties to the `application.properties` file for each service
+``` 
+management.endpoints.web.exposure.include=health, info, metrics, prometheus
+management.metrics.distribution.percentiles-histogram.http.server.requests=true
+management.observations.key-values.application= <your_service_name>
+```
+`web.exposure` exposes the health, info, metrics and Prometheus to the actuator. `metrics.distribution.percentiles-historgram`
+gathers the metrics in form of a histogram and sends them to the Prometheus. This works as Micrometer will record additional
+histogram buckets for the metrics, it is useful for latency as the mean can be misleading.
+
+Add the Prometheus configuration to the `docker-compose.yaml`
+``` 
+prometheus:
+  image: prom/prometheus:v2.53.1
+  command:
+    - --enable-feature=exemplar-storage
+    - --config.file=/etc/prometheus/prometheus.yml
+  volumes:
+    - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  ports:
+    - "9090:9090"
+```
+check this library for the latest version: [Prometheus GitHub](https://github.com/prometheus/prometheus/releases)
+
+Finally, set the Prometheus configuration by
+creating a `prometheus.yml` file in the `docker` directory located in the shared root directory of the services)
+``` 
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+ 
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+  - job_name: 'loan-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080'] ## only for demo purposes don't use host.docker.internal in production
+  - job_name: 'fraud-detection'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8081'] ## only for demo purposes don't use host.docker.internal in production
+```
+
+### TEMPO set up
+
+**@Observed**
+> [!TIP]
+> if you want to manually trace specific calls you can use the `Observation API` and the `@Observed` annotation on classes or 
+> methods
+
+Example: used to track JDBC repository traces/calls
+``` 
+@Repository
+@RequiredArgsConstructor
+@Observed
+public class LoanRepository {
+ 
+    private final JdbcClient jdbcClient;
+ 
+    .....
+    .....
+    .....
+}
+```
+
+Next, define a bean of type **ObservedAspect**. Create `ObservationConfig.java` class in the `src/main/java/.../config`
+``` 
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.observation.aop.ObservedAspect;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+ 
+@Configuration
+public class ObservationConfig {
+    @Bean
+    ObservedAspect observedAspect(ObservationRegistry registry) {
+        return new ObservedAspect(registry);
+    }
+```
+
+Next, change the tracing property in each service's `application.properties`
+``` 
+management.tracing.sampling.probability=1.0
+```
+1.0 means it will send 100% of the traces, default is 0.1 (10%).
+
+Add Tempo to the `docker-compose.yaml`
+``` 
+tempo:
+  image: grafana/tempo:2.5.0
+  command: [ "-config.file=/etc/tempo.yaml" ]
+  volumes:
+    - ./docker/tempo/tempo.yml:/etc/tempo.yaml:ro
+    - ./docker/tempo/tempo-data:/tmp/tempo
+  ports:
+    - "3200:3200" #Tempo changed from "3110:3100" 
+    - "9411:9411" # zipkin
+```
+
+Finally, create `tempo.yaml` file in the `docker/tempo` directory
+```
+server:
+  http_listen_port: 3200
+ 
+distributor:
+  receivers:
+    zipkin:
+ 
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/blocks
+```
+
+### Grafana set up
+> [!CAUTION]
+> Do Not use the following configuration for production level
+
+In the `docker-compose.yaml` set the following Grafana configuration
+``` 
+grafana:
+  image: grafana/grafana:11.1.3
+  volumes:
+    - ./docker/grafana:/etc/grafana/provisioning/datasources:ro
+  environment:
+    - GF_AUTH_ANONYMOUS_ENABLED=true
+    - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    - GF_AUTH_DISABLE_LOGIN_FORM=true
+  ports:
+    - "3000:3000"
+```
+check this library for the latest version: [Grafana GitHub](https://github.com/grafana/grafana/releases)
+
+Next, create `datasource.yaml` file in the `grafana` directory inside the `docker` directory. Add the following configuration
+``` 
+apiVersion: 1
+ 
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: false
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+  - name: Tempo
+    type: tempo
+    access: proxy
+    orgId: 1
+    url: http://tempo:3200
+    basicAuth: false
+    isDefault: true
+    version: 1
+    editable: false
+    apiVersion: 1
+    uid: tempo
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: 'loki'
+      nodeGraph:
+        enabled: true
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    orgId: 1
+    url: http://loki:3100
+    basicAuth: false
+    isDefault: false
+    version: 1
+    editable: false
+    apiVersion: 1
+    jsonData:
+      derivedFields:
+        -   datasourceUid: tempo
+            matcherRegex: \[.+,(.+?),
+            name: TraceID
+            url: $${__value.raw}
+```
+
+## Running Grafana Stack
+Download [Docker Desktop](https://www.docker.com/products/docker-desktop/), open Docker and make sure the engine is running
+
+![docker_engine.png](images/docker_engine.png)
+
+Run the following command in the terminal: ```docker compose up -d```
+
+The following should appear:
+
+![Grafana_Tempo_2 - Copy.png](images/Grafana_Tempo_2%20-%20Copy.png)
+
+double check all containers are running inside Docker Desktop.
 
 Run Loan Service Application
 
@@ -202,6 +400,40 @@ Run Fraud Detection Service Application
 3. Tempo: http://localhost:3110
 4. Loki: http://localhost:3100
 
-## Project Overview
+## Building Dashboards
+Some basic queries to build quick and easy dashboards
 
-![img.png](img.png)
+### Logs
+![Grafana_Loki - Copy.png](images/Grafana_Loki%20-%20Copy.png)
+
+View raw logs
+1. Paste the following code in the query: ``` {application="insert_your_service_name"} |= `$Filter` ```
+2. Select appropriate log visualization
+
+Filter for errors
+1. Paste the following code and select visualization: ``` {application="loan-service"} |= `ERROR` ```
+
+Time Series graph
+1. Paste the following code to see error count over time: ``` count_over_time({application="loan-service"} |= "ERROR" [1h])```
+
+### Prometheus
+![Grafana_Prometheus - Copy.png](images/Grafana_Prometheus%20-%20Copy.png)
+1. It is always best to check if you can import a pre-made dashboard like I did with this one
+2. Check the [Grafana Dashboard website](https://grafana.com/grafana/dashboards/) to check the dashboard that suits your needs.
+
+### Tempo
+![Grafana_Tempo_2 - Copy.png](images/Grafana_Tempo_2%20-%20Copy.png)
+
+To make the tracing graph
+
+![grafana_variable.png](images/grafana_variable.png)
+1. Create a variable in dashboard settings.
+2. Add visualization
+3. in TraceQL insert `$TraceID`
+4. select the **Traces** visualization
+
+Trace Logs
+1. in TraceQL ```{}``` to view all traces
+2. select the table/graphs and choose between different visualizations
+
+
