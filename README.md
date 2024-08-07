@@ -437,3 +437,4 @@ Trace Logs
 2. select the table/graphs and choose between different visualizations
 
 
+EOF
