@@ -14,7 +14,7 @@ Last Modified (2024-08-07)
 - Grafana Tempo: database for Traces (TRACEQL)
 - Grafana: dashboard to view all the information
 
-![Observability flow chart](StudioG_Observation_DashBoard%20_GitHub.png)
+![StudioG_Observation_DashBoard _GitHub.png](images/StudioG_Observation_DashBoard%20_GitHub.png)
 ## Set Up
 This set up is specific to **Maven** environment, for Gradle double-check the dependencies. For the container **Docker** is used
 for production level Kubernetes is preferred.
@@ -206,7 +206,7 @@ prometheus:
 check this library for the latest version: [Prometheus GitHub](https://github.com/prometheus/prometheus/releases)
 
 Finally, set the Prometheus configuration by
-creating a `prometheus.yml` file in the `docker` directory located in the shared root directory of the services)
+creating a `prometheus.yml` file in the `docker` directory located in the shared root directory of the services
 ``` 
 global:
   scrape_interval: 2s
