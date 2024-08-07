@@ -377,7 +377,7 @@ Run the following command in the terminal: ```docker compose up -d```
 
 The following should appear:
 
-![Grafana_Tempo_2 - Copy.png](images/Grafana_Tempo_2%20-%20Copy.png)
+![docker_terminal.png](images/docker_terminal.png)
 
 double check all containers are running inside Docker Desktop.
 
