@@ -437,4 +437,9 @@ Trace Logs
 2. select the table/graphs and choose between different visualizations
 
 
+## Future Changes
+There was an internal concern about Grafana (Tempo, Loki and Prometheus) being too resource-intensive. According to my research, Prometheus was the most resource-hungry followed by Loki. I presume Prometheus required a lot of resources because of all the scraping and calculating done constantly for the metrics thus taking up a lot of CPU and memory usage, Loki seemed to take a lot of memory usage to store the logs. The following articles dive deeper into how to solve this problem and the comparisons between different services.
+- [Prometheus’ performance and cardinality in practice](https://medium.com/@dotdc/prometheus-performance-and-cardinality-in-practice-74d5d9cd6230)
+- [Estimate Grafana Alloy resource usage](https://grafana.com/docs/grafana-cloud/send-data/alloy/introduction/estimate-resource-usage/)
+- [Prometheus vs VictoriaMetrics benchmark on node_exporter metrics](https://valyala.medium.com/prometheus-vs-victoriametrics-benchmark-on-node-exporter-metrics-4ca29c75590f)
 EOF
