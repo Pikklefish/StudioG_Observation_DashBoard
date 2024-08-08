@@ -16,7 +16,7 @@
 
 ![StudioG_Observation_DashBoard _GitHub.png](images/StudioG_Observation_DashBoard%20_GitHub.png)
 ## 설정
-이 설정은 **Maven** 환경에 특화되어 있으며, Gradle을 사용하는 경우 종속성을 재확인하십시오. 컨테이너에는 **Docker**가 사용되며, 프로덕션 수준에서는 
+이 설정은 **Maven** 환경에 특화되어 있으며, Gradle을 사용하는 경우 dependency을 재확인하십시오. 컨테이너에는 **Docker**가 사용되며, 프로덕션 수준에서는 
 Kubernetes를 선호합니다.
 
 ### 의존성
