@@ -442,4 +442,5 @@ There was an internal concern about Grafana (Tempo, Loki and Prometheus) being t
 - [Prometheus’ performance and cardinality in practice](https://medium.com/@dotdc/prometheus-performance-and-cardinality-in-practice-74d5d9cd6230)
 - [Estimate Grafana Alloy resource usage](https://grafana.com/docs/grafana-cloud/send-data/alloy/introduction/estimate-resource-usage/)
 - [Prometheus vs VictoriaMetrics benchmark on node_exporter metrics](https://valyala.medium.com/prometheus-vs-victoriametrics-benchmark-on-node-exporter-metrics-4ca29c75590f)
+
 EOF
