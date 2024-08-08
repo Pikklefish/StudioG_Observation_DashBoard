@@ -10,7 +10,7 @@
 
 ## 기본 개요
 - Grafana Loki: 로그용 데이터베이스 (LOGQL)
-- Prometheus: 메트릭용 데이터베이스 (PROMQL)
+- Prometheus: metrics용 데이터베이스 (PROMQL)
 - Grafana Tempo: 트레이스용 데이터베이스 (TRACEQL)
 - Grafana: 모든 정보를 보기 위한 대시보드
 
@@ -67,7 +67,7 @@ Kubernetes를 선호합니다.
 </dependency>
 ```
 `micrometer-tracing-bridge-brave` 는 distributed tracing을 위해 traceID를 자동으로 추가합니다. `zipkin-reporter-brave`
-는 trace 정보를 Tempo로 내보냅니다.
+는 trace 정보를 Tempo로 내보내는 역할을 합니다.
 >[!NOTE]
 > `Opentelemetry-micrometer-tracing-bridge-otel`을 `zipkin-reporter-brave` 대신 사용할 수 있습니다.
 
@@ -91,7 +91,7 @@ Kubernetes를 선호합니다.
 
 ### LOKI 설정
 
-먼저, `src/main/resources` 디렉토리 안에 `logback-spring.xml` 파일을 생성하십시오. 이 파일에는 로그를 구조화하는 방법과 로그를 어디로 
+먼저, `src/main/resources` directory 안에 `logback-spring.xml` 파일을 생성하십시오. 이 파일에는 로그를 구조화하는 방법과 로그를 어디로 
 보낼지에 대한 필요한 정보가 포함됩니다 (LOKI URL 정보 포함).
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -119,9 +119,9 @@ Kubernetes를 선호합니다.
     </root>
 </configuration>
 ```
-둘째, 두 서비스의 루트 디렉토리에 `docker-compose.yaml` 파일을 생성하십시오. 이 파일에는 다음 한 줄이 포함되어야 합니다: `services:`
+둘째, 두 서비스의 root directory에 `docker-compose.yaml` 파일을 생성하십시오. 이 파일에는 다음 한 줄이 포함되어야 합니다: `services:`
 
-셋째, `docker-compose.yaml` 파일의 `services:` 아래에 다음 Loki 구성을 추가하십시오
+셋째, `docker-compose.yaml` 파일의 `services:` 아래에 다음 Loki configuration을 추가하십시오
 ``` 
 loki:
   image: grafana/loki:main
@@ -130,8 +130,8 @@ loki:
     - "3100:3100"
 ```
 
-마지막으로, 이것이 Loki의 구성 파일입니다. 이 파일은 로컬 컴퓨터 또는 Docker 컨테이너에 존재할 수 있습니다. `docker-compose.yaml`에서
-Loki가 구성 파일의 위치에 올바르게 매핑되어 있는지 확인하십시오.
+마지막으로, 이것이 Loki의 configuration 파일입니다. 이 파일은 로컬 컴퓨터 또는 Docker 컨테이너에 존재할 수 있습니다. `docker-compose.yaml`에서
+Loki가 configuration 파일의 위치에 올바르게 mapping되어 있는지 확인하십시오.
 
 ``` 
 auth_enabled: false
@@ -189,10 +189,10 @@ management.observations.key-values.application= <your_service_name>
 ```
 
 `web.exposure`는 health, info, metrics 및 Prometheus를 actuator 노출합니다. `metrics.distribution.percentiles-histogram`은 
-히스토그램 형태로 메트릭을 수집하여 Prometheus로 보냅니다. Micrometer는 metric에 대한 추가 히스토그램 bucket을 기록하므로, 이는 평균이 오해를 
+histogram 형태로 metrics을 수집하여 Prometheus로 보냅니다. Micrometer는 metric에 대한 추가 histogram bucket을 기록하므로, 이는 평균이 오해를 
 일으킬 수 있는 latency에 유용합니다.
 
-`docker-compose.yaml`에 Prometheus 구성을 추가하십시오.
+`docker-compose.yaml`에 Prometheus configuration을 추가하십시오.
 ``` 
 prometheus:
   image: prom/prometheus:v2.53.1
@@ -206,7 +206,7 @@ prometheus:
 ```
 최신 버전을 확인하려면 이 라이브러리를 확인하십시오: [Prometheus GitHub](https://github.com/prometheus/prometheus/releases)
 
-마지막으로, 서비스를 공유하는 루트 디렉토리에 있는 `docker` 디렉토리에 `prometheus.yml` 파일을 생성하여 Prometheus 구성을 설정하십시오.
+마지막으로, 서비스를 공유하는 root directory에 있는 `docker` directory에 `prometheus.yml` 파일을 생성하여 Prometheus configuration을 설정하십시오.
 ``` 
 global:
   scrape_interval: 2s
@@ -232,7 +232,7 @@ scrape_configs:
 > [!TIP]
 > 특정 호출을 수동으로 추적하려면 `Observation API`와 class 또는 method에 `@Observed` annotation을 사용할 수 있습니다.
 
-예: JDBC 리포지토리 추적/호출을 추적하는 데 사용됨
+예: JDBC repository 추적/호출을 추적하는 데 사용됨
 ``` 
 @Repository
 @RequiredArgsConstructor
@@ -282,7 +282,7 @@ tempo:
     - "9411:9411" # zipkin
 ```
 
-마지막으로, `docker/tempo` 디렉토리에 `tempo.yaml` 파일을 생성하십시오.
+마지막으로, `docker/tempo` directory에 `tempo.yaml` 파일을 생성하십시오.
 ```
 server:
   http_listen_port: 3200
@@ -302,7 +302,7 @@ storage:
 > [!CAUTION]
 > Production 수준에서는 다음 설정을 사용하지 마십시오.
 
-`docker-compose.yaml`에 다음 Grafana 구성을 설정하십시오.
+`docker-compose.yaml`에 다음 Grafana configuration을 설정하십시오.
 ``` 
 grafana:
   image: grafana/grafana:11.1.3
@@ -317,7 +317,7 @@ grafana:
 ```
 최신 버전을 확인하려면 이 라이브러리를 확인하십시오: [Grafana GitHub](https://github.com/grafana/grafana/releases)
 
-다음으로, `docker` 디렉토리 안에 있는 `grafana` 디렉토리에 `datasource.yaml` 파일을 생성하십시오. 다음 구성을 추가하십시오.
+다음으로, `docker` directory 안에 있는 `grafana` directory에 `datasource.yaml` 파일을 생성하십시오. 다음 configuration을 추가하십시오.
 ``` 
 apiVersion: 1
  
